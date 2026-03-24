@@ -1,21 +1,20 @@
-package com.insper.mini_spotify;
+package com.insper.mini_spotify.usuario;
 
 import java.time.LocalDateTime;
 
 public class Usuario {
 
-    private long id;
+    private Long id;
     private String nome;
     private String email;
-    public enum TipoPlano {FREE, PREMIUM}
     private TipoPlano tipoPlano;
-    private boolean ativo;
+    private Boolean ativo;
     private LocalDateTime dataCriacao;
 
-    public long getId() {
+    public Long getId() {
         return id;
     }
-    public void setId(long id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -38,10 +37,10 @@ public class Usuario {
         this.tipoPlano = tipoPlano;
     }
 
-    public boolean getAtivo() {
+    public Boolean getAtivo() {
         return ativo;
     }
-    public void setAtivo(boolean ativo) {
+    public void setAtivo(Boolean ativo) {
         this.ativo = ativo;
     }
 

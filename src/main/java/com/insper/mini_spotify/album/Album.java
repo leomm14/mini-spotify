@@ -1,19 +1,20 @@
-package com.insper.mini_spotify;
+package com.insper.mini_spotify.album;
 
-import org.springframework.cglib.core.Local;
+import com.insper.mini_spotify.artista.Artista;
+
 import java.time.LocalDate;
 
 public class Album {
 
-    private long id;
+    private Long id;
     private String titulo;
     private LocalDate dataLancamento;
-    private String artista;
+    private Artista artista;
 
-    public long getId() {
+    public Long getId() {
         return id;
     }
-    public void setId(long id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -31,10 +32,10 @@ public class Album {
         this.dataLancamento = dataLancamento;
     }
 
-    public String getArtista() {
+    public Artista getArtista() {
         return artista;
     }
-    public void setArtista(String artista) {
+    public void setArtista(Artista artista) {
         this.artista = artista;
     }
 
