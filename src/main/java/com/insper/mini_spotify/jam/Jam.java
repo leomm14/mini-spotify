@@ -1,38 +1,43 @@
 package com.insper.mini_spotify.jam;
 
-import com.insper.mini_spotify.usuario.TipoPlano;
+import com.insper.mini_spotify.jam.dto.SaveJamDTO;
 import com.insper.mini_spotify.usuario.Usuario;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
+import java.util.List;
 
-//Explicação: Jam é como uma "party" de música, é um "grupo" no Spotify que o usuário pode criar para ouvir música ao mesmo tempo com outras pessoas
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
 public class Jam {
 
-    private Long id;
-    private Collection<Usuario> usuarios;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    @ManyToMany
+    @JoinTable(
+            name = "jam_usuario",
+            joinColumns = @JoinColumn(name = "jam_id"),
+            inverseJoinColumns = @JoinColumn(name = "usuario_id")
+    )
+    private List<Usuario> usuarios;
+
+    @CreationTimestamp
     private LocalDateTime dataCriacao;
 
-    public Long getId() {
-        return id;
-    }
-    public void setId(Long id) {
-        this.id = id;
-    }
+    @UpdateTimestamp
+    private LocalDateTime dataAtualizacao;
 
-    public Collection<Usuario> getUsuarios() {
-        return usuarios;
+    public static Jam toModel(SaveJamDTO dto, List<Usuario> usuarios) {
+        Jam jam = new Jam();
+        jam.setUsuarios(usuarios);
+        return jam;
     }
-    public void setUsuarios(Collection<Usuario> usuarios) {
-        this.usuarios = usuarios;
-    }
-
-    public LocalDateTime getDataCriacao() {
-        return dataCriacao;
-    }
-    public void setDataCriacao(LocalDateTime dataCriacao) {
-        this.dataCriacao = dataCriacao;
-    }
-
-
 }

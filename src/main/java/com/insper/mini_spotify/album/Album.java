@@ -1,42 +1,54 @@
 package com.insper.mini_spotify.album;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.insper.mini_spotify.album.dto.SaveAlbumDTO;
 import com.insper.mini_spotify.artista.Artista;
+import com.insper.mini_spotify.musica.Musica;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
 public class Album {
 
-    private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    @Column(nullable = false)
     private String titulo;
+
+    @Column(nullable = false)
     private LocalDate dataLancamento;
+
+    @ManyToOne
+    @JoinColumn(name = "id_artista", nullable = false)
     private Artista artista;
 
-    public Long getId() {
-        return id;
-    }
-    public void setId(Long id) {
-        this.id = id;
-    }
+    @JsonIgnore
+    @OneToMany(mappedBy = "album")
+    private List<Musica> musicas;
 
-    public String getTitulo() {
-        return titulo;
-    }
-    public void setTitulo(String titulo) {
-        this.titulo = titulo;
-    }
+    @CreationTimestamp
+    private LocalDateTime dataCriacao;
 
-    public LocalDate getDataLancamento() {
-        return dataLancamento;
-    }
-    public void setDataLancamento(LocalDate dataLancamento) {
-        this.dataLancamento = dataLancamento;
-    }
+    @UpdateTimestamp
+    private LocalDateTime dataAtualizacao;
 
-    public Artista getArtista() {
-        return artista;
+    public static Album toModel(SaveAlbumDTO dto, Artista artista) {
+        Album album = new Album();
+        album.setTitulo(dto.getTitulo());
+        album.setDataLancamento(dto.getDataLancamento());
+        album.setArtista(artista);
+        return album;
     }
-    public void setArtista(Artista artista) {
-        this.artista = artista;
-    }
-
 }

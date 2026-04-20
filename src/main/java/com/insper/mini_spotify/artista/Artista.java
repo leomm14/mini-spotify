@@ -1,38 +1,51 @@
 package com.insper.mini_spotify.artista;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.insper.mini_spotify.album.Album;
+import com.insper.mini_spotify.musica.Musica;
+import com.insper.mini_spotify.artista.dto.SaveArtistaDTO;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
 public class Artista {
 
-    private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
     private String nome;
     private String generoMusical;
     private String paisOrigem;
 
-    public Long getId() {
-        return id;
-    }
-    public void setId(Long id) {
-        this.id = id;
-    }
+    @JsonIgnore
+    @OneToMany(mappedBy = "artista")
+    private List<Album> albuns;
 
-    public String getNome() {
-        return nome;
-    }
-    public void setNome(String nome) {
-        this.nome = nome;
-    }
+    @JsonIgnore
+    @OneToMany(mappedBy = "artista")
+    private List<Musica> musicas;
 
-    public String getGeneroMusical() {
-        return generoMusical;
-    }
-    public void setGeneroMusical(String generoMusical) {
-        this.generoMusical = generoMusical;
-    }
+    @CreationTimestamp
+    private LocalDateTime dataCriacao;
 
-    public String getPaisOrigem() {
-        return paisOrigem;
-    }
-    public void setPaisOrigem(String paisOrigem) {
-        this.paisOrigem = paisOrigem;
-    }
+    @UpdateTimestamp
+    private LocalDateTime dataAtualizacao;
 
+    public static Artista toModel(SaveArtistaDTO saveArtistaDTO) {
+        Artista artista = new Artista();
+        artista.setNome(saveArtistaDTO.getNome());
+        artista.setGeneroMusical(saveArtistaDTO.getGeneroMusical());
+        artista.setPaisOrigem(saveArtistaDTO.getPaisOrigem());
+        return artista;
+    }
 }

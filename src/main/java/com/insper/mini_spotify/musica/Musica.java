@@ -1,61 +1,60 @@
 package com.insper.mini_spotify.musica;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.insper.mini_spotify.album.Album;
 import com.insper.mini_spotify.artista.Artista;
+import com.insper.mini_spotify.playlist.Playlist;
+import com.insper.mini_spotify.musica.dto.SaveMusicaDTO;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
 public class Musica {
 
-    private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
     private String titulo;
     private Integer duracaoSegundos;
     private Integer numeroFaixa;
-    private Album album;
-    private Artista artista;
     private Long totalReproducoes;
 
-    public Long getId() {
-        return id;
-    }
-    public void setId(Long id) {
-        this.id = id;
-    }
+    @ManyToOne
+    @JoinColumn(name = "id_album")
+    private Album album;
 
-    public String getTitulo() {
-        return titulo;
-    }
-    public void setTitulo(String titulo) {
-        this.titulo = titulo;
-    }
+    @ManyToOne
+    @JoinColumn(name = "id_artista")
+    private Artista artista;
 
-    public Integer getDuracaoSegundos() {
-        return duracaoSegundos;
-    }
-    public void setDuracaoSegundos(Integer duracaoSegundos) {
-        this.duracaoSegundos = duracaoSegundos;
-    }
+    @JsonIgnore
+    @ManyToMany(mappedBy = "musicas")
+    private List<Playlist> playlists;
 
-    public Integer getNumeroFaixa() {return numeroFaixa;}
-    public void setNumeroFaixa(Integer numeroFaixa) {this.numeroFaixa = numeroFaixa;}
+    @CreationTimestamp
+    private LocalDateTime dataCriacao;
 
-    public Album getAlbum() {
-        return album;
-    }
-    public void setAlbum(Album album) {
-        this.album = album;
-    }
+    @UpdateTimestamp
+    private LocalDateTime dataAtualizacao;
 
-    public Artista getArtista() {
-        return artista;
+    public static Musica toModel(SaveMusicaDTO dto, Artista artista, Album album) {
+        Musica musica = new Musica();
+        musica.setTitulo(dto.getTitulo());
+        musica.setDuracaoSegundos(dto.getDuracaoSegundos());
+        musica.setNumeroFaixa(dto.getNumeroFaixa());
+        musica.setTotalReproducoes(dto.getTotalReproducoes());
+        musica.setArtista(artista);
+        musica.setAlbum(album);
+        return musica;
     }
-    public void setArtista(Artista artista) {
-        this.artista = artista;
-    }
-
-    public Long getTotalReproducoes() {
-        return totalReproducoes;
-    }
-    public void setTotalReproducoes(Long totalReproducoes) {
-        this.totalReproducoes = totalReproducoes;
-    }
-
 }

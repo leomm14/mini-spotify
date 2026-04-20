@@ -4,119 +4,96 @@ import com.insper.mini_spotify.album.Album;
 import com.insper.mini_spotify.album.AlbumService;
 import com.insper.mini_spotify.artista.Artista;
 import com.insper.mini_spotify.artista.ArtistaService;
-import com.insper.mini_spotify.musica.Musica;
+import com.insper.mini_spotify.musica.dto.*;
 import com.insper.mini_spotify.usuario.Usuario;
 import com.insper.mini_spotify.usuario.UsuarioService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.*;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class MusicaService {
 
-    private final UsuarioService usuarioService;
-    private final ArtistaService artistaService;
-    private final AlbumService albumService;
-    private HashMap<Long, Musica> musicas = new HashMap<>();
+    @Autowired
+    private MusicaRepository musicaRepository;
 
-    public MusicaService(UsuarioService usuarioService, ArtistaService artistaService, AlbumService albumService) {
-        this.usuarioService = usuarioService;
-        this.artistaService = artistaService;
-        this.albumService = albumService;
+    @Autowired
+    private ArtistaService artistaService;
+
+    @Autowired
+    private AlbumService albumService;
+
+    @Autowired
+    private UsuarioService usuarioService;
+
+    public ResponseMusicaDTO save(SaveMusicaDTO dto) {
+        Artista artista = artistaService.get(dto.getIdArtista());
+        Album album = albumService.get(dto.getIdAlbum());
+
+        Musica musica = Musica.toModel(dto, artista, album);
+        musica = musicaRepository.save(musica);
+        return ResponseMusicaDTO.toDTO(musica);
     }
 
-    public Musica cadastrarMusica(Musica musica) {
-
-        if (musica.getId() == null || musica.getTitulo() == null || musica.getDuracaoSegundos() == null
-                || musica.getNumeroFaixa() == null || musica.getAlbum() == null || musica.getArtista() == null || musica.getTotalReproducoes() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Música não pode ser nulo");
+    public Page<ResponseMusicaDTO> list(String titulo, Pageable pageable) {
+        if (titulo != null) {
+            return musicaRepository
+                    .findByTituloContaining(titulo, pageable)
+                    .map(Musica -> ResponseMusicaDTO.toDTO(Musica));
         }
-
-        Album album = musica.getAlbum();
-        albumService.getAlbum(album.getId());
-        Artista artista = musica.getArtista();
-        artistaService.getArtista(artista.getId());
-
-        musicas.put(musica.getId(), musica);
-        return musica;
-
+        return musicaRepository.findAll(pageable).map(Musica -> ResponseMusicaDTO.toDTO(Musica));
     }
 
-    public Collection<Musica> listarMusicas() {return musicas.values();}
-
-    public Musica getMusica(Long id) {
-        Musica musica = musicas.get(id);
-        if (musica == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Música não encontrada");
-        }
-        return musica;
+    public Musica get(Integer id) {
+        return musicaRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Música não encontrada"));
     }
 
-    public Musica updateMusica(Long id, Musica musica) {
-        Musica musicaAntigo = musicas.get(id);
-        if (musicaAntigo == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Música não encontrada");
-        }
-        if (musica.getTitulo() != null) {
-            musicaAntigo.setTitulo(musica.getTitulo());
-        }
-        if (musica.getDuracaoSegundos() != null) {
-            musicaAntigo.setDuracaoSegundos(musica.getDuracaoSegundos());
-        }
-        if (musica.getNumeroFaixa() != null) {
-            musicaAntigo.setNumeroFaixa(musica.getNumeroFaixa());
-        }
-        if (musica.getAlbum() != null) {
-            Album album = musica.getAlbum();
-            albumService.getAlbum(album.getId());
-            musicaAntigo.setAlbum(album);
-        }
-        if (musica.getArtista() != null) {
-            Artista artista = musica.getArtista();
-            artistaService.getArtista(artista.getId());
-            musicaAntigo.setArtista(artista);
-        }
-        if (musica.getTotalReproducoes() != null) {
-            musicaAntigo.setTotalReproducoes(musica.getTotalReproducoes());
-        }
-        return musicaAntigo;
+    public ResponseMusicaDTO getDTO(Integer id) {
+        return ResponseMusicaDTO.toDTO(get(id));
     }
 
-    public void deleteMusica(Long id) {
-        Musica musica = getMusica(id);
-        musicas.remove(id);
+    public ResponseMusicaDTO edit(Integer id, EditMusicaDTO dto) {
+        Musica musicaDB = get(id);
+
+        if (dto.getTitulo() != null) musicaDB.setTitulo(dto.getTitulo());
+        if (dto.getDuracaoSegundos() != null) musicaDB.setDuracaoSegundos(dto.getDuracaoSegundos());
+        if (dto.getNumeroFaixa() != null) musicaDB.setNumeroFaixa(dto.getNumeroFaixa());
+        if (dto.getTotalReproducoes() != null) musicaDB.setTotalReproducoes(dto.getTotalReproducoes());
+
+        musicaDB = musicaRepository.save(musicaDB);
+        return ResponseMusicaDTO.toDTO(musicaDB);
     }
 
-    public Musica reproduzMusica(Long idMusica, Long idUsuario) {
-        Usuario usuario = usuarioService.getUsuario(idUsuario);
+    public void delete(Integer id) {
+        Musica musica = get(id);
+        musicaRepository.delete(musica);
+    }
+
+    public ResponseMusicaDTO reproduzir(Integer idMusica, Integer idUsuario) {
+        Usuario usuario = usuarioService.get(idUsuario);
         if (!usuario.getAtivo()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Usuário está inativo");
         }
-        Musica musica = getMusica(idMusica);
+
+        Musica musica = get(idMusica);
         musica.setTotalReproducoes(musica.getTotalReproducoes() + 1);
-        return musica;
+
+        musica = musicaRepository.save(musica);
+        return ResponseMusicaDTO.toDTO(musica);
     }
 
-    public List<TopMusicasDTO> geratop10() {
-        List<TopMusicasDTO> topMusicas = new ArrayList<>();
-
-        List<Musica> top10 = musicas.values()
-                .stream()
-                .sorted(Comparator.comparing(Musica::getTotalReproducoes).reversed())
+    public List<TopMusicasDTO> gerarTop10() {
+        return musicaRepository.findAll().stream()
+                .sorted((m1, m2) -> m2.getTotalReproducoes().compareTo(m1.getTotalReproducoes()))
                 .limit(10)
-                .toList();
-
-        for (Musica musica : top10) {
-            TopMusicasDTO topMusicasDTO = new TopMusicasDTO(musica.getTitulo(), musica.getArtista().getNome(), musica.getTotalReproducoes());
-            topMusicas.add(topMusicasDTO);
-        }
-
-        return topMusicas;
-
-
-
+                .map(m -> new TopMusicasDTO(m.getTitulo(), m.getArtista().getNome(), m.getTotalReproducoes()))
+                .collect(Collectors.toList());
     }
-
 }

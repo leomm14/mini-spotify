@@ -1,71 +1,70 @@
 package com.insper.mini_spotify.album;
 
-import com.insper.mini_spotify.album.Album;
+import com.insper.mini_spotify.album.dto.EditAlbumDTO;
+import com.insper.mini_spotify.album.dto.ResponseAlbumDTO;
+import com.insper.mini_spotify.album.dto.SaveAlbumDTO;
 import com.insper.mini_spotify.artista.Artista;
 import com.insper.mini_spotify.artista.ArtistaService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Collection;
-import  java.util.HashMap;
-
 @Service
 public class AlbumService {
 
-    private final ArtistaService artistaService;
-    private HashMap<Long, Album> albuns = new HashMap<>();
+    @Autowired
+    private AlbumRepository albumRepository;
 
-    public AlbumService(ArtistaService artistaService) {
-        this.artistaService = artistaService;
+    @Autowired
+    private ArtistaService artistaService;
+
+    public ResponseAlbumDTO save(SaveAlbumDTO dto) {
+        Artista artista = artistaService.get(dto.getIdArtista());
+
+        Album album = Album.toModel(dto, artista);
+        album = albumRepository.save(album);
+        return ResponseAlbumDTO.toDTO(album);
     }
 
-    public Album cadastrarAlbum(Album album) {
-
-        if (album.getId() == null || album.getTitulo() == null || album.getDataLancamento() == null || album.getArtista() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Álbum não pode ser nulo");
+    public Page<ResponseAlbumDTO> list(String titulo, Pageable pageable) {
+        if (titulo != null) {
+            return albumRepository
+                    .findByTituloContaining(titulo, pageable)
+                    .map(album -> ResponseAlbumDTO.toDTO(album));
         }
-
-        Artista artista = album.getArtista();
-        artistaService.getArtista(artista.getId());
-
-        albuns.put(album.getId(), album);
-        return album;
-
+        return albumRepository
+                .findAll(pageable)
+                .map(album -> ResponseAlbumDTO.toDTO(album));
     }
 
-    public Collection<Album> listarAlbums() {return albuns.values();}
-
-    public Album getAlbum(Long id) {
-        Album album = albuns.get(id);
-        if (album == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Álbum não encontrado");
-        }
-        return album;
+    public Album get(Integer id) {
+        return albumRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Álbum não encontrado"));
     }
 
-    public Album updateAlbum(Long id, Album album) {
-        Album albumAntigo = albuns.get(id);
-        if (albumAntigo == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Álbum não encontrado");
-        }
-        if (album.getTitulo() != null) {
-            albumAntigo.setTitulo(album.getTitulo());
-        }
-        if (album.getDataLancamento() != null) {
-            albumAntigo.setDataLancamento(album.getDataLancamento());
-        }
-        if (album.getArtista() != null) {
-            Artista artista = album.getArtista();
-            artistaService.getArtista(artista.getId());
-            albumAntigo.setArtista(artista);
-        }
-        return albumAntigo;
+    public ResponseAlbumDTO getDTO(Integer id) {
+        return ResponseAlbumDTO.toDTO(get(id));
     }
 
-    public void deleteAlbum(Long id) {
-        Album album = getAlbum(id);
-        albuns.remove(id);
+    public ResponseAlbumDTO edit(Integer id, EditAlbumDTO dto) {
+        Album albumDB = get(id);
+
+        if (dto.getTitulo() != null) {
+            albumDB.setTitulo(dto.getTitulo());
+        }
+        if (dto.getDataLancamento() != null) {
+            albumDB.setDataLancamento(dto.getDataLancamento());
+        }
+
+        albumDB = albumRepository.save(albumDB);
+        return ResponseAlbumDTO.toDTO(albumDB);
     }
 
+    public void delete(Integer id) {
+        Album album = get(id);
+        albumRepository.delete(album);
+    }
 }

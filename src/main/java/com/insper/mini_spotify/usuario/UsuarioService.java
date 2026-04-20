@@ -1,65 +1,69 @@
 package com.insper.mini_spotify.usuario;
 
+import com.insper.mini_spotify.usuario.dto.EditUsuarioDTO;
+import com.insper.mini_spotify.usuario.dto.ResponseUsuarioDTO;
+import com.insper.mini_spotify.usuario.dto.SaveUsuarioDTO;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Collection;
-import  java.util.HashMap;
-
 @Service
 public class UsuarioService {
 
-    private HashMap<Long, Usuario> usuarios = new HashMap<>();
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
-    public Usuario cadastrarUsuario(Usuario usuario) {
-
-        if (usuario.getId() == null || usuario.getNome() == null || usuario.getEmail() == null
-                || usuario.getTipoPlano() == null || usuario.getAtivo() == null || usuario.getDataCriacao() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Usuário não pode ser nulo");
+    public ResponseUsuarioDTO save(SaveUsuarioDTO saveUsuarioDTO) {
+        if (usuarioRepository.existsByEmail(saveUsuarioDTO.getEmail())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email já cadastrado");
         }
-        usuarios.put(usuario.getId(), usuario);
-        return usuario;
-
+        Usuario usuario = Usuario.toModel(saveUsuarioDTO);
+        usuario = usuarioRepository.save(usuario);
+        return ResponseUsuarioDTO.toDTO(usuario);
     }
 
-    public Collection<Usuario> listarUsuarios() {return usuarios.values();}
-
-    public Usuario getUsuario(Long id) {
-        Usuario usuario = usuarios.get(id);
-        if (usuario == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado");
+    public Page<ResponseUsuarioDTO> list(String nome, Pageable pageable) {
+        if (nome != null) {
+            return usuarioRepository
+                    .findByNomeContaining(nome, pageable)
+                    .map(usuario -> ResponseUsuarioDTO.toDTO(usuario));
         }
-        return usuario;
+        return usuarioRepository
+                .findAll(pageable)
+                .map(usuario -> ResponseUsuarioDTO.toDTO(usuario));
     }
 
-    public Usuario updateUsuario(Long id, Usuario usuario) {
-        Usuario usuarioAntigo = usuarios.get(id);
-        if (usuarioAntigo == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado");
-        }
-        if (usuario.getNome() != null) {
-            usuarioAntigo.setNome(usuario.getNome());
-        }
-        if (usuario.getEmail() != null) {
-            usuarioAntigo.setEmail(usuario.getEmail());
-        }
-        if (usuario.getTipoPlano() != null) {
-            usuarioAntigo.setTipoPlano(usuario.getTipoPlano());
-        }
-        if (usuario.getAtivo() != null) {
-            usuarioAntigo.setAtivo(usuario.getAtivo());
-        }
-        if (usuario.getDataCriacao() != null) {
-            usuarioAntigo.setDataCriacao(usuario.getDataCriacao());
-        }
-        return usuarioAntigo;
+    public Usuario get(Integer id) {
+        return usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
     }
 
-    public void deleteUsuario(Long id) {
-        Usuario usuario = getUsuario(id);
-        usuarios.remove(id);
+    public ResponseUsuarioDTO getDTO(Integer id) {
+        return ResponseUsuarioDTO.toDTO(get(id));
     }
 
+    public ResponseUsuarioDTO edit(Integer id, EditUsuarioDTO editUsuarioDTO) {
+        Usuario usuarioDB = get(id);
+
+        if (editUsuarioDTO.getNome() != null) {
+            usuarioDB.setNome(editUsuarioDTO.getNome());
+        }
+        if (editUsuarioDTO.getTipoPlano() != null) {
+            usuarioDB.setTipoPlano(editUsuarioDTO.getTipoPlano());
+        }
+        if (editUsuarioDTO.getAtivo() != null) {
+            usuarioDB.setAtivo(editUsuarioDTO.getAtivo());
+        }
+
+        usuarioDB = usuarioRepository.save(usuarioDB);
+        return ResponseUsuarioDTO.toDTO(usuarioDB);
+    }
+
+    public void delete(Integer id) {
+        Usuario usuario = get(id);
+        usuarioRepository.delete(usuario);
+    }
 }
-

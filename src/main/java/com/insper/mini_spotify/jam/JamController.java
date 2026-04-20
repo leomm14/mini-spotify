@@ -1,12 +1,14 @@
 package com.insper.mini_spotify.jam;
 
-import com.insper.mini_spotify.jam.Jam;
-import com.insper.mini_spotify.jam.JamService;
+import com.insper.mini_spotify.jam.dto.EditJamDTO;
+import com.insper.mini_spotify.jam.dto.ResponseJamDTO;
+import com.insper.mini_spotify.jam.dto.SaveJamDTO;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Collection;
 
 @RestController
 public class JamController {
@@ -15,19 +17,28 @@ public class JamController {
     private JamService jamService;
 
     @GetMapping("/jams")
-    public Collection<Jam> getJams() {return jamService.listarJams();}
+    public Page<ResponseJamDTO> getJams(Pageable pageable) {
+        return jamService.list(pageable);
+    }
 
     @GetMapping("/jams/{id}")
-    public Jam getJam(@PathVariable Long id) {return jamService.getJam(id);}
+    public ResponseJamDTO getJam(@PathVariable Integer id) {
+        return jamService.getDTO(id);
+    }
 
     @PostMapping("/jams")
     @ResponseStatus(HttpStatus.CREATED)
-    public Jam saveJam(@RequestBody Jam jam) {return jamService.cadastrarJam(jam);}
+    public ResponseJamDTO saveJam(@Valid @RequestBody SaveJamDTO jam) {
+        return jamService.save(jam);
+    }
 
     @PutMapping("/jams/{id}")
-    public Jam updateJam(@PathVariable Long id, @RequestBody Jam jam) {return jamService.updateJam(id, jam);}
+    public ResponseJamDTO updateJam(@PathVariable Integer id, @RequestBody EditJamDTO jam) {
+        return jamService.edit(id, jam);
+    }
 
     @DeleteMapping("/jams/{id}")
-    public void deleteJam(@PathVariable Long id) {jamService.deleteJam(id);}
-
+    public void deleteJam(@PathVariable Integer id) {
+        jamService.delete(id);
+    }
 }

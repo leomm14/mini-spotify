@@ -1,12 +1,14 @@
 package com.insper.mini_spotify.playlist;
 
-import com.insper.mini_spotify.playlist.Playlist;
-import com.insper.mini_spotify.playlist.PlaylistService;
+import com.insper.mini_spotify.playlist.dto.EditPlaylistDTO;
+import com.insper.mini_spotify.playlist.dto.ResponsePlaylistDTO;
+import com.insper.mini_spotify.playlist.dto.SavePlaylistDTO;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Collection;
 
 @RestController
 public class PlaylistController {
@@ -15,22 +17,38 @@ public class PlaylistController {
     private PlaylistService playlistService;
 
     @GetMapping("/playlists")
-    public Collection<Playlist> getPlaylists() {return playlistService.listarPlaylists();}
+    public Page<ResponsePlaylistDTO> getPlaylists(
+            @RequestParam(required = false) String nome,
+            Pageable pageable) {
+        return playlistService.list(nome, pageable);
+    }
 
     @GetMapping("/playlists/{id}")
-    public Playlist getPlaylist(@PathVariable Long id) {return playlistService.getPlaylist(id);}
+    public ResponsePlaylistDTO getPlaylist(@PathVariable Integer id) {
+        return playlistService.getDTO(id);
+    }
 
     @PostMapping("/playlists")
     @ResponseStatus(HttpStatus.CREATED)
-    public Playlist savePlaylist(@RequestBody Playlist playlist) {return playlistService.cadastrarPlaylist(playlist);}
+    public ResponsePlaylistDTO savePlaylist(@Valid @RequestBody SavePlaylistDTO playlist) {
+        return playlistService.save(playlist);
+    }
 
     @PutMapping("/playlists/{id}")
-    public Playlist updatePlaylist(@PathVariable Long id, @RequestBody Playlist playlist) {return playlistService.updatePlaylist(id, playlist);}
+    public ResponsePlaylistDTO updatePlaylist(@PathVariable Integer id, @RequestBody EditPlaylistDTO playlist) {
+        return playlistService.edit(id, playlist);
+    }
 
     @DeleteMapping("/playlists/{id}")
-    public void deletePlaylist(@PathVariable Long id) {playlistService.deletePlaylist(id);}
+    public void deletePlaylist(@PathVariable Integer id) {
+        playlistService.delete(id);
+    }
 
     @PostMapping("/playlists/{playlistId}/musicas/{musicaId}")
-    public Playlist adicionaMusica(@PathVariable("playlistId") Long idPlaylist, @PathVariable("musicaId") Long idMusica, @RequestHeader("X-USER-ID") Long idUsuario) {return playlistService.adicionaMusica(idPlaylist, idMusica,idUsuario);}
-
+    public ResponsePlaylistDTO adicionaMusica(
+            @PathVariable Integer playlistId,
+            @PathVariable Integer musicaId,
+            @RequestHeader("X-USER-ID") Integer idUsuario) {
+        return playlistService.adicionaMusica(playlistId, musicaId, idUsuario);
+    }
 }

@@ -1,107 +1,96 @@
 package com.insper.mini_spotify.playlist;
 
-import com.insper.mini_spotify.album.Album;
-import com.insper.mini_spotify.artista.Artista;
 import com.insper.mini_spotify.musica.Musica;
 import com.insper.mini_spotify.musica.MusicaService;
-import com.insper.mini_spotify.playlist.Playlist;
+import com.insper.mini_spotify.playlist.dto.*;
 import com.insper.mini_spotify.usuario.Usuario;
 import com.insper.mini_spotify.usuario.UsuarioService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Collection;
-import  java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class PlaylistService {
 
-    private final UsuarioService usuarioService;
-    private final MusicaService musicaService;
-    private HashMap<Long, Playlist> playlists = new HashMap<>();
+    @Autowired
+    private PlaylistRepository playlistRepository;
 
-    public PlaylistService(UsuarioService usuarioService, MusicaService musicaService) {
-        this.usuarioService = usuarioService;
-        this.musicaService = musicaService;
+    @Autowired
+    private UsuarioService usuarioService;
+
+    @Autowired
+    private MusicaService musicaService;
+
+    public ResponsePlaylistDTO save(SavePlaylistDTO dto) {
+        Usuario usuario = usuarioService.get(dto.getIdUsuario());
+
+        List<Musica> musicas = new ArrayList<>();
+        for (Integer id : dto.getIdsMusicas()) {
+            Musica musica = musicaService.get(id);
+            musicas.add(musica);
+        }
+
+        Playlist playlist = Playlist.toModel(dto, usuario, musicas);
+        playlist = playlistRepository.save(playlist);
+
+        return ResponsePlaylistDTO.toDTO(playlist);
     }
 
-    public Playlist cadastrarPlaylist(Playlist playlist) {
-
-        if (playlist.getId() == null || playlist.getNome() == null || playlist.getPublica() == null
-                || playlist.getDataCriacao() == null || playlist.getUsuario() == null || playlist.getMusicas() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Playlist não pode ser nulo");
+    public Page<ResponsePlaylistDTO> list(String nome, Pageable pageable) {
+        if (nome != null) {
+            return playlistRepository.findByNomeContaining(nome, pageable)
+                    .map(ResponsePlaylistDTO::toDTO);
         }
-
-        Usuario usuario = playlist.getUsuario();
-        usuarioService.getUsuario(usuario.getId());
-        for(Musica musica : playlist.getMusicas()) {
-            musicaService.getMusica(musica.getId());
-        }
-
-        playlists.put(playlist.getId(), playlist);
-        return playlist;
-
+        return playlistRepository.findAll(pageable).map(ResponsePlaylistDTO::toDTO);
     }
 
-    public Collection<Playlist> listarPlaylists() {
-        return playlists.values();
+    public Playlist get(Integer id) {
+        return playlistRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Playlist não encontrada"));
     }
 
-    public Playlist getPlaylist(Long id) {
-        Playlist playlist = playlists.get(id);
-        if (playlist == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Playlist não encontrada");
-        }
-        return playlist;
+    public ResponsePlaylistDTO getDTO(Integer id) {
+        return ResponsePlaylistDTO.toDTO(get(id));
     }
 
-    public Playlist updatePlaylist(Long id, Playlist playlist) {
-        Playlist playlistAntigo = playlists.get(id);
-        if (playlistAntigo == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Música não encontrada");
-        }
-        if (playlist.getNome() != null) {
-            playlistAntigo.setNome(playlist.getNome());
-        }
-        if (playlist.getPublica() != null) {
-            playlistAntigo.setPublica(playlist.getPublica());
-        }
-        if (playlist.getDataCriacao() != null) {
-            playlistAntigo.setDataCriacao(playlist.getDataCriacao());
-        }
-        if (playlist.getUsuario() != null) {
-            Usuario usuario = playlist.getUsuario();
-            usuarioService.getUsuario(usuario.getId());
-            playlistAntigo.setUsuario(usuario);
-        }
-        if (playlist.getMusicas() != null) {
-            for(Musica musica : playlist.getMusicas()) {
-                musicaService.getMusica(musica.getId());
-            }
-            playlistAntigo.setMusicas(playlist.getMusicas());
-        }
-        return playlistAntigo;
+    public ResponsePlaylistDTO edit(Integer id, EditPlaylistDTO dto) {
+        Playlist playlistDB = get(id);
+
+        if (dto.getNome() != null) playlistDB.setNome(dto.getNome());
+        if (dto.getPublica() != null) playlistDB.setPublica(dto.getPublica());
+
+        playlistDB = playlistRepository.save(playlistDB);
+        return ResponsePlaylistDTO.toDTO(playlistDB);
     }
 
-    public void deletePlaylist(Long id) {
-        Playlist playlist = getPlaylist(id);
-        playlists.remove(id);
+    public void delete(Integer id) {
+        Playlist playlist = get(id);
+        playlistRepository.delete(playlist);
     }
 
-    public Playlist adicionaMusica(Long idPlaylist, Long idMusica, Long idUsuario) {
-        Usuario usuario = usuarioService.getUsuario(idUsuario);
-        Playlist playlist = getPlaylist(idPlaylist);
-        Musica musica = musicaService.getMusica(idMusica);
-        if (!playlist.getUsuario().getId().equals(usuario.getId()) ) {
+    public ResponsePlaylistDTO adicionaMusica(Integer idPlaylist, Integer idMusica, Integer idUsuario) {
+        Usuario usuario = usuarioService.get(idUsuario);
+        Playlist playlist = get(idPlaylist);
+        Musica musica = musicaService.get(idMusica);
+
+        if (!playlist.getUsuario().getId().equals(usuario.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Apenas o dono da playlist pode adicionar músicas");
         }
+
         if (playlist.getMusicas().contains(musica)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"A música já está na playlist");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A música já está na playlist");
         }
-        Collection<Musica> musicas = playlist.getMusicas();
-        musicas.add(musica);
-        playlist.setMusicas(musicas);
-        return playlist;
+
+        playlist.getMusicas().add(musica);
+        playlist = playlistRepository.save(playlist);
+
+        return ResponsePlaylistDTO.toDTO(playlist);
     }
 }

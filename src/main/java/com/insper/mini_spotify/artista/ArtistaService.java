@@ -1,7 +1,14 @@
 package com.insper.mini_spotify.artista;
 
 import com.insper.mini_spotify.artista.Artista;
+import com.insper.mini_spotify.artista.dto.EditArtistaDTO;
+import com.insper.mini_spotify.artista.dto.ResponseArtistaDTO;
+import com.insper.mini_spotify.artista.dto.SaveArtistaDTO;
 import com.insper.mini_spotify.usuario.Usuario;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.crossstore.ChangeSetPersister;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -12,48 +19,55 @@ import  java.util.HashMap;
 @Service
 public class ArtistaService {
 
-    private HashMap<Long, Artista> artistas = new HashMap<>();
+    @Autowired
+    private ArtistaRepository artistaRepository;
 
-    public Artista cadastrarArtista(Artista artista) {
-
-        if (artista.getId() == null || artista.getNome() == null || artista.getGeneroMusical() == null || artista.getPaisOrigem() == null ) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Artista não pode ser nulo");
-        }
-        artistas.put(artista.getId(), artista);
-        return artista;
+    public ResponseArtistaDTO save(SaveArtistaDTO saveArtistaDTO) {
+        Artista artista = Artista.toModel(saveArtistaDTO);
+        artista = artistaRepository.save(artista);
+        return ResponseArtistaDTO.toDTO(artista);
 
     }
 
-    public Collection<Artista> listarArtistas() {return artistas.values();}
-
-    public Artista getArtista(Long id) {
-        Artista artista = artistas.get(id);
-        if (artista == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Artista não encontrado");
+    public Page<ResponseArtistaDTO> list(String nome, Pageable pageable) {
+        if (nome != null) {
+            return artistaRepository
+                    .findByNomeContaining(nome, pageable)
+                    .map(artista -> ResponseArtistaDTO.toDTO(artista));
         }
-        return artista;
+        return artistaRepository
+                .findAll(pageable)
+                .map(artista -> ResponseArtistaDTO.toDTO(artista));
     }
 
-    public Artista updateArtista(Long id, Artista artista) {
-        Artista artistaAntigo = artistas.get(id);
-        if (artistaAntigo == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Artista não encontrado");
-        }
-        if (artista.getNome() != null) {
-            artistaAntigo.setNome(artista.getNome());
-        }
-        if (artista.getGeneroMusical() != null) {
-            artistaAntigo.setGeneroMusical(artista.getGeneroMusical());
-        }
-        if (artista.getPaisOrigem() != null) {
-            artistaAntigo.setPaisOrigem(artista.getPaisOrigem());
-        }
-        return artistaAntigo;
+    public Artista get(Integer id) {
+        return artistaRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Artista não encontrado"));
     }
 
-    public void deleteArtista(Long id) {
-        Artista artista = getArtista(id);
-        artistas.remove(id);
+    public ResponseArtistaDTO getDTO(Integer id) {return ResponseArtistaDTO.toDTO(get(id));}
+
+
+    public ResponseArtistaDTO edit(Integer id, EditArtistaDTO editArtistaDTO) {
+        Artista artistaDB = get(id);
+
+        if (editArtistaDTO.getNome() != null) {
+            artistaDB.setNome(editArtistaDTO.getNome());
+        }
+        if (editArtistaDTO.getGeneroMusical() != null) {
+            artistaDB.setGeneroMusical(editArtistaDTO.getGeneroMusical());
+        }
+        if (editArtistaDTO.getPaisOrigem() != null) {
+            artistaDB.setPaisOrigem(editArtistaDTO.getPaisOrigem());
+        }
+
+        artistaDB = artistaRepository.save(artistaDB);
+        return ResponseArtistaDTO.toDTO(artistaDB);
+    }
+
+    public void delete(Integer id) {
+        Artista artista = get(id);
+        artistaRepository.delete(artista);
     }
 
 }

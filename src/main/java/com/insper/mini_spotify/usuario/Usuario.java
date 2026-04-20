@@ -1,54 +1,59 @@
 package com.insper.mini_spotify.usuario;
 
-import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.insper.mini_spotify.jam.Jam;
+import com.insper.mini_spotify.playlist.Playlist;
+import com.insper.mini_spotify.usuario.dto.SaveUsuarioDTO;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
 public class Usuario {
 
-    private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    @Column(nullable = false)
     private String nome;
+
+    @Column(nullable = false, unique = true)
     private String email;
+
+    @Enumerated(EnumType.STRING)
     private TipoPlano tipoPlano;
+
     private Boolean ativo;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "usuario")
+    private List<Playlist> playlists;
+
+    @JsonIgnore
+    @ManyToMany(mappedBy = "usuarios")
+    private List<Jam> jams;
+
+    @CreationTimestamp
     private LocalDateTime dataCriacao;
 
-    public Long getId() {
-        return id;
-    }
-    public void setId(Long id) {
-        this.id = id;
-    }
+    @UpdateTimestamp
+    private LocalDateTime dataAtualizacao;
 
-    public String getNome() {
-        return nome;
+    public static Usuario toModel(SaveUsuarioDTO saveUsuarioDTO) {
+        Usuario usuario = new Usuario();
+        usuario.setNome(saveUsuarioDTO.getNome());
+        usuario.setEmail(saveUsuarioDTO.getEmail());
+        usuario.setTipoPlano(saveUsuarioDTO.getTipoPlano());
+        usuario.setAtivo(saveUsuarioDTO.getAtivo());
+        return usuario;
     }
-    public void setNome(String nome) {
-        this.nome = nome;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public TipoPlano getTipoPlano() {return tipoPlano;}
-    public void setTipoPlano(TipoPlano tipoPlano) {
-        this.tipoPlano = tipoPlano;
-    }
-
-    public Boolean getAtivo() {
-        return ativo;
-    }
-    public void setAtivo(Boolean ativo) {
-        this.ativo = ativo;
-    }
-
-    public LocalDateTime getDataCriacao() {
-        return dataCriacao;
-    }
-    public void setDataCriacao(LocalDateTime dataCriacao) {
-        this.dataCriacao = dataCriacao;
-    }
-
 }
